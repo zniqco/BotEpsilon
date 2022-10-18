@@ -1,0 +1,76 @@
+const { SlashCommandBuilder } = require('discord.js');
+const database = require('../database.js');
+
+const maxTextLength = 32;
+const maxContentsLength = 512;
+
+module.exports = {
+	data: new SlashCommandBuilder()
+		.setName('memo')
+		.setDescription('메모를 제어하는 명령어입니다.')
+        .addSubcommand(subcommand =>
+            subcommand.setName('add')
+                .setDescription('메모를 추가합니다.')
+                .addStringOption(option =>
+                    option.setName('text')
+                        .setDescription('메모 제목을 입력합니다.')
+                        .setRequired(true)
+                        .setMaxLength(maxTextLength))
+                .addStringOption(option =>
+                    option.setName('contents')
+                        .setDescription('메모 내용을 입력합니다.')
+                        .setRequired(true)
+                        .setMaxLength(maxContentsLength)))
+        .addSubcommand(subcommand =>
+            subcommand.setName('remove')
+                .setDescription('메모를 삭제합니다.')
+                .addStringOption(option =>
+                    option.setName('text')
+                        .setDescription('메모 제목을 입력합니다.')
+                        .setRequired(true)
+                        .setMaxLength(maxTextLength))),
+	execute: async (interaction) => {
+        switch (interaction.options.getSubcommand()) {
+            case 'add':
+                const addText = interaction.options.getString('text');
+                const addContents = interaction.options.getString('contents');
+
+                if (addText.length > maxTextLength || addContents.length > maxContentsLength) {
+                    await interaction.reply(`올바르지 않은 제목 혹은 내용입니다.`);
+                } else {
+                    await database.connect(async connection => {
+                        await connection.query('REPLACE INTO `bot_epsilon_memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
+                            interaction.guildId,
+                            addText,
+                            addContents,
+                        ]);
+                    });
+
+                    await interaction.reply(`메모 '${addText}' 기록 되었습니다.`);
+                }
+                
+                break;
+
+            case 'remove':
+                const deleteText = interaction.options.getString('text');
+
+                if (deleteText.length > 32) {
+                    await interaction.reply(`올바르지 않은 제목입니다.`);
+                } else {
+                    await database.connect(async connection => {
+                        const [result] = await connection.query('DELETE FROM `bot_epsilon_memo` WHERE `guild_id` = ? AND `text` = ?', [
+                            interaction.guildId,
+                            deleteText,
+                        ]);
+
+                        if (result.affectedRows >= 1)
+                            await interaction.reply(`메모 '${deleteText}' 삭제 되었습니다.`);
+                        else
+                            await interaction.reply(`메모가 존재하지 않습니다.`);
+                    });
+                }
+
+                break;
+        }
+	}
+};
