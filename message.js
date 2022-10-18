@@ -29,8 +29,8 @@ discord.client.on('messageCreate', message => {
         // Memo
         if (message.content.length <= 32) {
             (async () => {
-                await database.connect(async connection => {
-                    const [result] = await connection.query('SELECT `contents` FROM `bot_epsilon_memo` WHERE `guild_id` = ? AND `text` = ?', [
+                await database.getConnection(async conn => {
+                    const [result] = await conn.query('SELECT `contents` FROM `bot_epsilon_memo` WHERE `guild_id` = ? AND `text` = ?', [
                         message.guildId,
                         message.content,
                     ]);

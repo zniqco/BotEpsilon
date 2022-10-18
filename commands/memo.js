@@ -38,8 +38,8 @@ module.exports = {
                 if (addText.length > maxTextLength || addContents.length > maxContentsLength) {
                     await interaction.reply(`올바르지 않은 제목 혹은 내용입니다.`);
                 } else {
-                    await database.connect(async connection => {
-                        await connection.query('REPLACE INTO `bot_epsilon_memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
+                    await database.getConnection(async conn => {
+                        await conn.query('REPLACE INTO `bot_epsilon_memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
                             interaction.guildId,
                             addText,
                             addContents,
@@ -57,8 +57,8 @@ module.exports = {
                 if (deleteText.length > 32) {
                     await interaction.reply(`올바르지 않은 제목입니다.`);
                 } else {
-                    await database.connect(async connection => {
-                        const [result] = await connection.query('DELETE FROM `bot_epsilon_memo` WHERE `guild_id` = ? AND `text` = ?', [
+                    await database.getConnection(async conn => {
+                        const [result] = await conn.query('DELETE FROM `bot_epsilon_memo` WHERE `guild_id` = ? AND `text` = ?', [
                             interaction.guildId,
                             deleteText,
                         ]);
