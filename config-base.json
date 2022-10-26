@@ -1,0 +1,10 @@
+{
+    "config": {
+        "clientId": "",
+        "token": "",
+        "databaseHost": "",
+        "databaseUser": "",
+        "databasePassword": "",
+        "databaseName": ""
+    }
+}

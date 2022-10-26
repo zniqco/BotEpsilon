@@ -5,9 +5,9 @@ const maxTextLength = 32;
 const maxContentsLength = 512;
 
 module.exports = {
-	data: new SlashCommandBuilder()
-		.setName('memo')
-		.setDescription('메모를 제어하는 명령어입니다.')
+    data: new SlashCommandBuilder()
+        .setName('memo')
+        .setDescription('메모를 제어하는 명령어입니다.')
         .addSubcommand(subcommand =>
             subcommand.setName('add')
                 .setDescription('메모를 추가합니다.')
@@ -29,7 +29,7 @@ module.exports = {
                         .setDescription('메모 제목을 입력합니다.')
                         .setRequired(true)
                         .setMaxLength(maxTextLength))),
-	execute: async (interaction) => {
+    execute: async (interaction) => {
         switch (interaction.options.getSubcommand()) {
             case 'add':
                 const addText = interaction.options.getString('text');
@@ -72,5 +72,5 @@ module.exports = {
 
                 break;
         }
-	}
+    }
 };

@@ -20,24 +20,24 @@ discord.client.commands = new Collection();
             commands.push(command.data.toJSON());
             discord.client.commands.set(command.data.name, command);
         } else {
-            console.log(`command: ${filePath}: Missing 'data' or 'execute' property.`);
+            console.log(`command: ${filePath}: Missing 'data' or 'execute' property`);
         }
     }
     
-	try {
-		const data = await discord.rest.put(
-			Routes.applicationCommands(config.clientId),
-			{ body: commands },
-		);
+    try {
+        const data = await discord.rest.put(
+            Routes.applicationCommands(config.clientId),
+            { body: commands },
+        );
 
-		console.log(`command: ${data.length} application command(s) loaded.`);
-	} catch (e) {
-		console.error(e);
-	}
+        console.log(`command: ${data.length} command(s) loaded`);
+    } catch (e) {
+        console.error(e);
+    }
 })();
 
 discord.client.on('interactionCreate', async interaction => {
-	if (interaction.isChatInputCommand()) {
+    if (interaction.isChatInputCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
 
         if (command) {
