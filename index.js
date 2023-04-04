@@ -17,9 +17,9 @@ const messageReceivers = [];
         const filePath = path.join(modulePath, file);
         const module = require(filePath);
     
-        if ('commandData' in module && 'commandExecute' in module) { // Has command?
+        if ('commandData' in module && 'commandExecutor' in module) { // Has command?
             modules.push(module.commandData.toJSON());
-            commands.set(module.commandData.name, module.commandExecute);
+            commands.set(module.commandData.name, module.commandExecutor);
         }
 
         if ('messageReceiver' in module) {

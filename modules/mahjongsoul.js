@@ -7,17 +7,17 @@ function generateMessage(n) {
 module.exports = {
     commandData: new SlashCommandBuilder()
         .setName('mahjongsoul')
-        .setDescription('작혼에 관련된 유틸리티입니다.')
+        .setDescription('작혼')
         .addSubcommand(subcommand =>
             subcommand.setName('room')
                 .setDescription('친선전 방 링크를 생성합니다.')
                 .addStringOption(option =>
                     option.setName('number')
-                        .setDescription('방 번호를 입력합니다')
+                        .setDescription('방 번호')
                         .setRequired(true)
                         .setMinLength(5)
                         .setMaxLength(5))),
-    commandExecute: async interaction => {
+    commandExecutor: async interaction => {
         switch (interaction.options.getSubcommand()) {
             case 'room':
                 const roomNumber = interaction.options.getString('number');
@@ -28,10 +28,7 @@ module.exports = {
                     return;
                 }
 
-                await interaction.reply({
-                    content: '올바른 방 번호가 아닙니다.',
-                    ephemeral: true
-                });
+                await interaction.reply({ content: '올바른 방 번호가 아닙니다.', ephemeral: true });
                 
                 break;
         }

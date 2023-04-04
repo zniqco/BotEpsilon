@@ -7,18 +7,18 @@ const maxContentsLength = 512;
 module.exports = {
     commandData: new SlashCommandBuilder()
         .setName('memo')
-        .setDescription('메모를 제어하는 명령어입니다.')
+        .setDescription('메모')
         .addSubcommand(subcommand =>
             subcommand.setName('add')
                 .setDescription('메모를 추가합니다.')
                 .addStringOption(option =>
                     option.setName('text')
-                        .setDescription('메모 제목을 입력합니다.')
+                        .setDescription('메모 제목')
                         .setRequired(true)
                         .setMaxLength(maxTextLength))
                 .addStringOption(option =>
                     option.setName('contents')
-                        .setDescription('메모 내용을 입력합니다.')
+                        .setDescription('메모 내용')
                         .setRequired(true)
                         .setMaxLength(maxContentsLength)))
         .addSubcommand(subcommand =>
@@ -26,10 +26,10 @@ module.exports = {
                 .setDescription('메모를 삭제합니다.')
                 .addStringOption(option =>
                     option.setName('text')
-                        .setDescription('메모 제목을 입력합니다.')
+                        .setDescription('메모 제목')
                         .setRequired(true)
                         .setMaxLength(maxTextLength))),
-    commandExecute: async interaction => {
+    commandExecutor: async interaction => {
         switch (interaction.options.getSubcommand()) {
             case 'add':
                 const addText = interaction.options.getString('text');
