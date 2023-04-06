@@ -11,6 +11,6 @@
   "description": "",
   "dependencies": {
     "discord.js": "^14.6.0",
-    "mysql2": "^2.3.3"
+    "sqlite3": "^5.1.6"
   }
 }
