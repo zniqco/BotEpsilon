@@ -1,5 +1,5 @@
 const sqlite = require('sqlite3').verbose();
-const db = new sqlite.Database('./database.db', sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE);
+const db = new sqlite.Database('./data/database.db', sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE);
 
 db.run('CREATE TABLE IF NOT EXISTS `memo` (\n' + 
     '`guild_id` varchar(22) NOT NULL,\n' +
