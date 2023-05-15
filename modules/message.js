@@ -20,7 +20,7 @@ module.exports = {
                 const count = interaction.options.getInteger('count');
 
                 await interaction.reply({ content: `삭제 중 입니다...`, ephemeral: true });
-                await interaction.channel.bulkDelete(count);
+                await interaction.channel.bulkDelete(count, true);
                 await interaction.deleteReply();
 
                 break;
