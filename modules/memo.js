@@ -4,6 +4,12 @@ const database = require('../database.js');
 const maxTextLength = 32;
 const maxContentsLength = 512;
 
+database.runSync('CREATE TABLE IF NOT EXISTS `memo` (\n' + 
+    '`guild_id` varchar(22) NOT NULL,\n' +
+    '`text` varchar(128) NOT NULL,\n' +
+    '`contents` varchar(512) NOT NULL,\n' +
+    'PRIMARY KEY (`guild_id`, `text`))');
+
 module.exports = {
     commandData: new SlashCommandBuilder()
         .setName('memo')
@@ -38,7 +44,7 @@ module.exports = {
                 if (addText.length > maxTextLength || addContents.length > maxContentsLength) {
                     await interaction.reply(`올바르지 않은 제목 혹은 내용입니다.`);
                 } else {
-                    await database.execute('REPLACE INTO `memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
+                    await database.run('REPLACE INTO `memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
                         interaction.guildId,
                         addText,
                         addContents,
@@ -55,7 +61,7 @@ module.exports = {
                 if (deleteText.length > 32) {
                     await interaction.reply(`올바르지 않은 제목입니다.`);
                 } else {
-                    const result = await database.execute('DELETE FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
+                    const result = await database.run('DELETE FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
                         interaction.guildId,
                         deleteText,
                     ]);
