@@ -41,8 +41,6 @@ client.once(Events.ClientReady, async c => {
             Routes.applicationCommands(clientId),
             { body: modules },
         );
-
-        console.log(`${data.length} command(s) loaded`);
     } catch (e) {
         console.error(e);
     }

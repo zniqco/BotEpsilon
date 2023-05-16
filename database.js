@@ -19,16 +19,11 @@ module.exports = {
             });
         });
     },
-    runSync: (query, params, err) => {
-        const stmt = db.prepare(query, params, e1 => {
-            if (e1) return err && err(e1);
+    runSync: (query, params) => {
+        const stmt = db.prepare(query, params);
 
-            stmt.run(e2 => {
-                if (e2) return err && err(e2);
-            });
-
-            stmt.finalize();
-        });
+        stmt.run();
+        stmt.finalize();
     },
     get: async (query, params) => {
         return new Promise((resolve, reject) => {
@@ -40,6 +35,22 @@ module.exports = {
                         return reject(e2);
                     
                     resolve(row);
+                });
+
+                stmt.finalize();
+            });
+        });
+    },
+    all: async (query, params) => {
+        return new Promise((resolve, reject) => {
+            const stmt = db.prepare(query, params, e1 => {
+                if (e1) return reject(e1);
+
+                stmt.all((e2, rows) => {
+                    if (e2)
+                        return reject(e2);
+                    
+                    resolve(rows);
                 });
 
                 stmt.finalize();

@@ -45,9 +45,7 @@ module.exports = {
                     await interaction.reply(`올바르지 않은 제목 혹은 내용입니다.`);
                 } else {
                     await database.run('REPLACE INTO `memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
-                        interaction.guildId,
-                        addText,
-                        addContents,
+                        interaction.guildId, addText, addContents,
                     ]);
 
                     await interaction.reply(`메모 '${addText}' 기록 되었습니다.`);
@@ -62,8 +60,7 @@ module.exports = {
                     await interaction.reply(`올바르지 않은 제목입니다.`);
                 } else {
                     const result = await database.run('DELETE FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
-                        interaction.guildId,
-                        deleteText,
+                        interaction.guildId, deleteText,
                     ]);
 
                     if (result.changes > 0)
@@ -79,8 +76,7 @@ module.exports = {
         if (message.content.length <= 32) {
             (async () => {
                 const result = await database.get('SELECT `contents` FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
-                    message.guildId,
-                    message.content,
+                    message.guildId, message.content,
                 ]);
 
                 if (result && result.contents) {
