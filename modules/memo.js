@@ -5,7 +5,7 @@ const maxTextLength = 32;
 const maxContentsLength = 512;
 
 database.runSync('CREATE TABLE IF NOT EXISTS `memo` (\n' + 
-    '`guild_id` varchar(22) NOT NULL,\n' +
+    '`guild_id` varchar(24) NOT NULL,\n' +
     '`text` varchar(128) NOT NULL,\n' +
     '`contents` varchar(512) NOT NULL,\n' +
     'PRIMARY KEY (`guild_id`, `text`))');
