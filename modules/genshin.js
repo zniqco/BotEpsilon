@@ -4,18 +4,18 @@ const axios = require('axios').default;
 const schedule = require('node-schedule');
 const database = require('../database.js');
 
-const statusUrl = 'https://sg-public-api.hoyolab.com/event/luna/os/info?lang=ko-kr&act_id=e202303301540311';
-const attendanceUrl = 'https://sg-public-api.hoyolab.com/event/luna/os/sign?lang=ko-kr&act_id=e202303301540311';
+const statusUrl = 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481';
+const attendanceUrl = 'https://sg-hk4e-api.hoyolab.com/event/sol/sign?lang=ko-kr&act_id=e202102251931481';
 
-database.runSync('CREATE TABLE IF NOT EXISTS `honkaisr_user` (\n' + 
+database.runSync('CREATE TABLE IF NOT EXISTS `genshin_user` (\n' + 
     '`user_id` varchar(24) NOT NULL,\n' +
     '`guild_id` varchar(24) NOT NULL,\n' +
     '`ltoken` varchar(64) NOT NULL,\n' +
     '`ltuid` varchar(12) NOT NULL,\n' +
     'PRIMARY KEY (`user_id`))');
 
-schedule.scheduleJob({ hour: 6, minute: 5, tz: 'Asia/Seoul' }, async () => {
-    const rows = await database.all('SELECT `ltoken`, `ltuid` FROM `honkaisr_user`');
+schedule.scheduleJob({ hour: 6, minute: 25, tz: 'Asia/Seoul' }, async () => {
+    const rows = await database.all('SELECT `ltoken`, `ltuid` FROM `genshin_user`');
 
     for (const row of rows) {
         await axios({
@@ -32,8 +32,8 @@ schedule.scheduleJob({ hour: 6, minute: 5, tz: 'Asia/Seoul' }, async () => {
 
 module.exports = {
     commandData: new SlashCommandBuilder()
-        .setName('honkaisr')
-        .setDescription('붕괴: 스타레일')
+        .setName('genshin')
+        .setDescription('원신')
         .addSubcommand(subcommand =>
             subcommand.setName('register')
                 .setDescription('유저를 등록합니다.')
@@ -69,7 +69,7 @@ module.exports = {
                     break;
                 }
 
-                await database.run('REPLACE INTO `honkaisr_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`) VALUES (?, ?, ?, ?)', [
+                await database.run('REPLACE INTO `genshin_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`) VALUES (?, ?, ?, ?)', [
                     interaction.user.id, interaction.guildId, ltoken, ltuid,
                 ]);
 
@@ -78,7 +78,7 @@ module.exports = {
                 break;
 
             case 'unregister':
-                const result = await database.run('DELETE FROM `honkaisr_user` WHERE `user_id` = ?', [
+                const result = await database.run('DELETE FROM `genshin_user` WHERE `user_id` = ?', [
                     interaction.user.id,
                 ]);
 

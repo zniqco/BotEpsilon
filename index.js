@@ -1,23 +1,16 @@
 const fs = require('node:fs');
-const path = require('node:path');
+const config = require('./config.js');
 const { Client, REST, Events, GatewayIntentBits, Collection, Routes } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const commandHandlers = new Collection();
 const messageReceivers = [];
 
-// Configs
-const configFile = fs.existsSync('./config.json') ? require('./config.json') : {};
-const clientId = configFile.CLIENT_ID ?? process.env.BOT_EPSILON_CLIENT_ID;
-const token = configFile.TOKEN ?? process.env.BOT_EPSILON_TOKEN;
-
 // Modules
 const modules = [];
-const modulePath = path.join(__dirname, 'modules');
-const moduleFiles = fs.readdirSync(modulePath).filter(file => file.endsWith('.js'));
+const moduleFiles = fs.readdirSync('./modules').filter(file => file.endsWith('.js'));
 
 for (const file of moduleFiles) {
-    const filePath = path.join(modulePath, file);
-    const module = require(filePath);
+    const module = require('./modules/' + file);
 
     if ('commandData' in module && 'commandExecutor' in module) { // Has command?
         modules.push(module.commandData.toJSON());
@@ -29,16 +22,15 @@ for (const file of moduleFiles) {
     }
 }
 
-// Set commands
-const rest = new REST({ version: '10' }).setToken(token);
+// Commands
+const rest = new REST({ version: '10' }).setToken(config.token);
 
 client.once(Events.ClientReady, async c => {
     console.log(`Logged in as '${c.user.tag}'`);
 
-    // Push commands
     try {
-        const data = await rest.put(
-            Routes.applicationCommands(clientId),
+        await rest.put(
+            Routes.applicationCommands(config.clientId),
             { body: modules },
         );
     } catch (e) {
@@ -71,4 +63,4 @@ client.on(Events.MessageCreate, message => {
 });
 
 // Login
-client.login(token);
+client.login(config.token);
