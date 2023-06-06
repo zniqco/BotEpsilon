@@ -7,11 +7,11 @@ const database = require('../database.js');
 const statusUrl = 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481';
 const attendanceUrl = 'https://sg-hk4e-api.hoyolab.com/event/sol/sign?lang=ko-kr&act_id=e202102251931481';
 
-database.runSync('CREATE TABLE IF NOT EXISTS `genshin_user` (\n' + 
-    '`user_id` varchar(24) NOT NULL,\n' +
-    '`guild_id` varchar(24) NOT NULL,\n' +
-    '`ltoken` varchar(64) NOT NULL,\n' +
-    '`ltuid` varchar(12) NOT NULL,\n' +
+database.runSync('CREATE TABLE IF NOT EXISTS `genshin_user` (' + 
+    '`user_id` varchar(24) NOT NULL,' +
+    '`guild_id` varchar(24) NOT NULL,' +
+    '`ltoken` varchar(64) NOT NULL,' +
+    '`ltuid` varchar(12) NOT NULL,' +
     'PRIMARY KEY (`user_id`))');
 
 schedule.scheduleJob({ hour: 6, minute: 25, tz: 'Asia/Seoul' }, async () => {
