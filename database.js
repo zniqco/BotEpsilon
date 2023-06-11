@@ -1,5 +1,6 @@
+const config = require('./config.js');
 const sqlite = require('sqlite3').verbose();
-const db = new sqlite.Database('./data/database.db', sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE);
+const db = new sqlite.Database(config.databasePath, sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE);
 
 module.exports = {
     run: async (query, params = []) => {

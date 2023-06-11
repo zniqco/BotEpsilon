@@ -1,5 +1,5 @@
-const fs = require('node:fs');
 const config = require('./config.js');
+const fs = require('node:fs');
 const { Client, REST, Events, GatewayIntentBits, Collection, Routes } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const commandHandlers = new Collection();
