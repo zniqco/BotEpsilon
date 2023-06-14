@@ -3,7 +3,7 @@ const sqlite = require('sqlite3').verbose();
 const db = new sqlite.Database(config.databasePath, sqlite.OPEN_READWRITE | sqlite.OPEN_CREATE);
 
 module.exports = {
-    run: async (query, params = []) => {
+    run: async function (query, params = []) {
         return new Promise((resolve, reject) => {
             db.serialize(() => {
                 const stmt = db.prepare(query, params, e1 => {
@@ -20,7 +20,7 @@ module.exports = {
             });
         });
     },
-    runSync: (query, params = []) => {
+    runSync: function (query, params = []) {
         db.serialize(() => {
             const stmt = db.prepare(query, params);
 
@@ -28,7 +28,7 @@ module.exports = {
             stmt.finalize();
         });
     },
-    get: async (query, params = []) => {
+    get: async function (query, params = []) {
         return new Promise((resolve, reject) => {
             db.serialize(() => {
                 const stmt = db.prepare(query, params, e1 => {
@@ -45,7 +45,7 @@ module.exports = {
             });
         });
     },
-    all: async (query, params = []) => {
+    all: async function (query, params = []) {
         return new Promise((resolve, reject) => {
             db.serialize(() => {
                 const stmt = db.prepare(query, params, e1 => {

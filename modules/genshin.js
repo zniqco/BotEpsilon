@@ -1,8 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
-const utility = require('../utility.js');
-const axios = require('axios').default;
 const schedule = require('node-schedule');
+const utility = require('../utility.js');
 const database = require('../database.js');
+const hoyolab = require('./utility/hoyolab.js');
 
 database.runSync('CREATE TABLE IF NOT EXISTS `genshin_user` (' + 
     '`user_id` varchar(24) NOT NULL,' +
@@ -11,18 +11,11 @@ database.runSync('CREATE TABLE IF NOT EXISTS `genshin_user` (' +
     '`ltuid` varchar(12) NOT NULL,' +
     'PRIMARY KEY (`user_id`))');
 
-schedule.scheduleJob({ hour: 6, minute: 25, tz: 'Asia/Seoul' }, async () => {
+schedule.scheduleJob({ hour: 2, minute: 25, tz: 'Asia/Seoul' }, async function () {
     const rows = await database.all('SELECT `ltoken`, `ltuid` FROM `genshin_user`');
 
     for (const row of rows) {
-        await axios({
-            method: 'POST',
-            url: 'https://sg-hk4e-api.hoyolab.com/event/sol/sign?lang=ko-kr&act_id=e202102251931481',
-            headers: {
-                'Cookie': `ltoken=${row.ltoken};ltuid=${row.ltuid}`
-            },
-        });
-
+        await hoyolab.post(row.ltoken, row.ltuid, 'https://sg-hk4e-api.hoyolab.com/event/sol/sign?lang=ko-kr&act_id=e202102251931481');
         await utility.delay(300);
     }
 });
@@ -47,36 +40,16 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.')),
-    commandExecutor: async interaction => {
+    commandExecutor: async function (interaction) {
         switch (interaction.options.getSubcommand()) {
-            case 'register':
-            {
+            case 'register': {
                 await interaction.deferReply({ ephemeral: true });
 
                 const ltoken = interaction.options.getString('ltoken').replace(/[^a-zA-Z0-9]+/g, '');
                 const ltuid = interaction.options.getString('ltuid').replace(/[^0-9]+/g, '');
-                const recordCardResult = await axios({
-                    method: 'GET',
-                    url: `https://bbs-api-os.hoyolab.com/game_record/card/wapi/getGameRecordCard?uid=${ltuid}`,
-                    headers: {
-                        'Cookie': `ltoken=${ltoken};ltuid=${ltuid}`
-                    },
-                });                
-                const recordRow = recordCardResult?.data?.data?.list?.filter(x => x.game_id == 2 && x.region == 'os_asia');
-                const uid = recordRow[0]?.game_role_id;
+                const result = await hoyolab.get(ltoken, ltuid, 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481');
 
-                if (!uid)
-                    return await interaction.editReply({ content: '계정이 존재하지 않습니다.' });
-
-                const infoResult = await axios({
-                    method: 'GET',
-                    url: 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481',
-                    headers: {
-                        'Cookie': `ltoken=${ltoken};ltuid=${ltuid}`
-                    },
-                });
-
-                if (infoResult?.data?.retcode !== 0)
+                if (!result)
                     return await interaction.editReply({ content: '계정 정보가 올바르지 않습니다.' });
 
                 await database.run('REPLACE INTO `genshin_user` (`user_id`, `guild_id`, `uid`, `ltoken`, `ltuid`) VALUES (?, ?, ?, ?, ?)', [
@@ -86,8 +59,7 @@ module.exports = {
                 return await interaction.editReply({ content: '등록에 성공했습니다.'});
             }
 
-            case 'unregister':
-            {
+            case 'unregister': {
                 await interaction.deferReply({ ephemeral: true });
 
                 const result = await database.run('DELETE FROM `genshin_user` WHERE `user_id` = ?', [

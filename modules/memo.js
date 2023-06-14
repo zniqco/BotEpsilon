@@ -35,7 +35,7 @@ module.exports = {
                         .setDescription('메모 제목')
                         .setRequired(true)
                         .setMaxLength(maxTextLength))),
-    commandExecutor: async interaction => {
+    commandExecutor: async function (interaction) {
         switch (interaction.options.getSubcommand()) {
             case 'add':
                 const addText = interaction.options.getString('text');
@@ -72,7 +72,7 @@ module.exports = {
                 break;
         }
     },
-    messageReceiver: message => {
+    messageReceiver: function (message) {
         if (message.content.length <= 32) {
             (async () => {
                 const result = await database.get('SELECT `contents` FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [

@@ -14,7 +14,7 @@ module.exports = {
                         .setRequired(true)
                         .setMinValue(1)
                         .setMaxValue(50))),
-    commandExecutor: async interaction => {
+    commandExecutor: async function (interaction) {
         switch (interaction.options.getSubcommand()) {
             case 'purge':
                 const count = interaction.options.getInteger('count');

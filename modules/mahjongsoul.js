@@ -17,7 +17,7 @@ module.exports = {
                         .setRequired(true)
                         .setMinLength(5)
                         .setMaxLength(5))),
-    commandExecutor: async interaction => {
+    commandExecutor: async function (interaction) {
         switch (interaction.options.getSubcommand()) {
             case 'room':
                 const roomNumber = interaction.options.getString('number');
