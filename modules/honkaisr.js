@@ -47,11 +47,10 @@ module.exports = {
                     option.setName('user')
                         .setDescription('확인 대상')
                         .setRequired(true))),
-    commandExecutor: async function (interaction) {
-        switch (interaction.options.getSubcommand()) {
-            case 'register': {
-                await interaction.deferReply({ ephemeral: true });
-
+    commandHandler: {
+        'register': {
+            ephemeral: true,
+            execute: async function (interaction) {
                 const ltoken = interaction.options.getString('ltoken').replace(/[^a-zA-Z0-9]+/g, '');
                 const ltuid = interaction.options.getString('ltuid').replace(/[^0-9]+/g, '');
                 const result = await hoyolab.get(ltoken, ltuid, 'https://sg-public-api.hoyolab.com/event/luna/os/info?lang=ko-kr&act_id=e202303301540311');
@@ -63,25 +62,24 @@ module.exports = {
                     interaction.user.id, interaction.guildId, ltoken, ltuid,
                 ]);
 
-                return await interaction.editReply({ content: '등록에 성공했습니다.' });
-            }
-
-            case 'unregister': {
-                await interaction.deferReply({ ephemeral: true });
-
+                await interaction.editReply({ content: '등록에 성공했습니다.' });
+            },
+        },
+        'unregister': {
+            ephemeral: true,
+            execute: async function (interaction) {
                 const result = await database.run('DELETE FROM `honkaisr_user` WHERE `user_id` = ?', [
                     interaction.user.id,
                 ]);
 
                 if (result.changes > 0)
-                    return await interaction.editReply({ content: `등록이 해제되었습니다.` });
+                    await interaction.editReply({ content: `등록이 해제되었습니다.` });
                 else
-                    return await interaction.editReply({ content: `등록되지 않은 계정입니다.` });
-            }
-
-            case 'info': {
-                await interaction.deferReply();
-
+                    await interaction.editReply({ content: `등록되지 않은 계정입니다.` });
+            },
+        },
+        'info': {
+            execute: async function (interaction) {
                 const user = interaction.options.getUser('user');
                 const userRow = await database.get('SELECT `ltoken`, `ltuid` FROM `honkaisr_user` WHERE `user_id` = ?', [
                     user.id
@@ -108,7 +106,7 @@ module.exports = {
                 if (!note)
                     return await interaction.editReply({ content: 'note 정보를 가져올 수 없습니다.' });
 
-                return await interaction.editReply({ embeds: [
+                await interaction.editReply({ embeds: [
                     new EmbedBuilder()
                         .setAuthor({ name: `Lv. ${recordRow.level} ${recordRow.nickname} (${uid})` })
                         .setTimestamp()
@@ -138,7 +136,7 @@ module.exports = {
                             },
                         )
                 ]});
-            }
-        }
-    }
+            },
+        },
+    },
 };

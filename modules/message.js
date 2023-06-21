@@ -14,16 +14,15 @@ module.exports = {
                         .setRequired(true)
                         .setMinValue(1)
                         .setMaxValue(50))),
-    commandExecutor: async function (interaction) {
-        switch (interaction.options.getSubcommand()) {
-            case 'purge':
+    commandHandler: {
+        'purge': {
+            ephemeral: true,
+            execute: async function (interaction) {
                 const count = interaction.options.getInteger('count');
 
-                await interaction.reply({ content: `삭제 중 입니다...`, ephemeral: true });
                 await interaction.channel.bulkDelete(count, true);
                 await interaction.deleteReply();
-
-                break;
+            },
         }
     },
 };

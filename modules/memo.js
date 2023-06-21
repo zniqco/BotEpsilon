@@ -35,42 +35,39 @@ module.exports = {
                         .setDescription('메모 제목')
                         .setRequired(true)
                         .setMaxLength(maxTextLength))),
-    commandExecutor: async function (interaction) {
-        switch (interaction.options.getSubcommand()) {
-            case 'add':
-                const addText = interaction.options.getString('text');
-                const addContents = interaction.options.getString('contents');
+    commandHandler: {
+        'add': {
+            execute: async function (interaction) {
+                const text = interaction.options.getString('text');
+                const contents = interaction.options.getString('contents');
 
-                if (addText.length > maxTextLength || addContents.length > maxContentsLength) {
-                    await interaction.reply(`올바르지 않은 제목 혹은 내용입니다.`);
-                } else {
-                    await database.run('REPLACE INTO `memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
-                        interaction.guildId, addText, addContents,
-                    ]);
+                if (text.length > maxTextLength || contents.length > maxContentsLength)
+                    return await interaction.editReply(`올바르지 않은 제목 혹은 내용입니다.`);
 
-                    await interaction.reply(`메모 '${addText}' 기록 되었습니다.`);
-                }
-                
-                break;
+                await database.run('REPLACE INTO `memo` (`guild_id`, `text`, `contents`) VALUES (?, ?, ?)', [
+                    interaction.guildId, text, contents,
+                ]);
 
-            case 'remove':
-                const deleteText = interaction.options.getString('text');
+                await interaction.editReply(`메모 '${text}' 기록 되었습니다.`);
+            },
+        },
+        'remove': {
+            execute: async function (interaction) {
+                const text = interaction.options.getString('text');
 
-                if (deleteText.length > 32) {
-                    await interaction.reply(`올바르지 않은 제목입니다.`);
-                } else {
-                    const result = await database.run('DELETE FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
-                        interaction.guildId, deleteText,
-                    ]);
+                if (text.length > 32)
+                    return await interaction.editReply(`올바르지 않은 제목입니다.`);
 
-                    if (result.changes > 0)
-                        await interaction.reply(`메모 '${deleteText}' 삭제 되었습니다.`);
-                    else
-                        await interaction.reply(`메모가 존재하지 않습니다.`);
-                }
+                const result = await database.run('DELETE FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
+                    interaction.guildId, text,
+                ]);
 
-                break;
-        }
+                if (result.changes > 0)
+                    await interaction.editReply(`메모 '${text}' 삭제 되었습니다.`);
+                else
+                    await interaction.editReply(`메모가 존재하지 않습니다.`);
+            },
+        },
     },
     messageReceiver: function (message) {
         if (message.content.length <= 32) {

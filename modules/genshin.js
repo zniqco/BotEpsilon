@@ -40,11 +40,10 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.')),
-    commandExecutor: async function (interaction) {
-        switch (interaction.options.getSubcommand()) {
-            case 'register': {
-                await interaction.deferReply({ ephemeral: true });
-
+    commandHandler: {
+        'register': {
+            ephemeral: true,
+            execute: async function (interaction) {
                 const ltoken = interaction.options.getString('ltoken').replace(/[^a-zA-Z0-9]+/g, '');
                 const ltuid = interaction.options.getString('ltuid').replace(/[^0-9]+/g, '');
                 const result = await hoyolab.get(ltoken, ltuid, 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481');
@@ -57,20 +56,20 @@ module.exports = {
                 ]);
 
                 return await interaction.editReply({ content: '등록에 성공했습니다.'});
-            }
-
-            case 'unregister': {
-                await interaction.deferReply({ ephemeral: true });
-
+            },
+        },
+        'unregister': {
+            ephemeral: true,
+            execute: async function (interaction) {
                 const result = await database.run('DELETE FROM `genshin_user` WHERE `user_id` = ?', [
                     interaction.user.id,
                 ]);
 
                 if (result.changes > 0)
-                    return await interaction.editReply({ content: `등록이 해제되었습니다.` });
+                    await interaction.editReply({ content: `등록이 해제되었습니다.` });
                 else
-                    return await interaction.editReply({ content: `등록되지 않은 계정입니다.` });
-            }
-        }
-    }
+                    await interaction.editReply({ content: `등록되지 않은 계정입니다.` });
+            },
+        },
+    },
 };

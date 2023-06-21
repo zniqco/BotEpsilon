@@ -2,19 +2,21 @@ const config = require('./config.js');
 const fs = require('node:fs');
 const { Client, REST, Events, GatewayIntentBits, Collection, Routes } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-const commandHandlers = new Collection();
+const commandHandlers = {};
 const messageReceivers = [];
 
 // Modules
-const modules = [];
+const commandDatas = [];
 const moduleFiles = fs.readdirSync('./modules').filter(file => file.endsWith('.js'));
 
 for (const file of moduleFiles) {
     const module = require('./modules/' + file);
 
-    if ('commandData' in module && 'commandExecutor' in module) { // Has command?
-        modules.push(module.commandData.toJSON());
-        commandHandlers.set(module.commandData.name, module.commandExecutor);
+    if ('commandData' in module) { // Has command?
+        commandDatas.push(module.commandData.toJSON());
+
+        if ('commandHandler' in module)
+            commandHandlers[module.commandData.name] = module.commandHandler;
     }
 
     if ('messageReceiver' in module) {
@@ -31,7 +33,7 @@ client.once(Events.ClientReady, async c => {
     try {
         await rest.put(
             Routes.applicationCommands(config.clientId),
-            { body: modules },
+            { body: commandDatas },
         );
     } catch (e) {
         console.error(e);
@@ -41,16 +43,27 @@ client.once(Events.ClientReady, async c => {
 // Events
 client.on(Events.InteractionCreate, async interaction => {
     if (interaction.isChatInputCommand()) {
-        const command = commandHandlers.get(interaction.commandName);
+        const handler = commandHandlers[interaction.commandName];
 
-        if (command) {
-            try {
-                await command(interaction);
-            } catch (e) {
-                console.error(e);
+        if (handler) {
+            const subcommand = interaction.options.getSubcommand();
+            const entry = handler[subcommand];
 
-                await interaction.reply({ content: '명령어를 실행하는데 실패했습니다.', ephemeral: true });
+            if (entry) {
+                await interaction.deferReply({ ephemeral: entry.ephemeral ?? false });
+
+                try {
+                    await entry.execute(interaction);
+                } catch (e) {
+                    console.error(e);
+    
+                    await interaction.editReply({ content: '명령어를 실행하는데 실패했습니다. (EX)' });
+                }
+            } else {
+                await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', ephemeral: true });
             }
+
+            return;
         }
     }
 });

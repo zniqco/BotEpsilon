@@ -17,20 +17,16 @@ module.exports = {
                         .setRequired(true)
                         .setMinLength(5)
                         .setMaxLength(5))),
-    commandExecutor: async function (interaction) {
-        switch (interaction.options.getSubcommand()) {
-            case 'room':
+    commandHandler: {
+        'room': {
+            execute: async function (interaction) {
                 const roomNumber = interaction.options.getString('number');
 
-                if (/^\d+$/.test(roomNumber)) {
-                    await interaction.reply(generateMessage(roomNumber));
+                if (/^\d+$/.test(roomNumber))
+                    return await interaction.editReply(generateMessage(roomNumber));
 
-                    return;
-                }
-
-                await interaction.reply({ content: '올바른 방 번호가 아닙니다.', ephemeral: true });
-                
-                break;
+                await interaction.editReply({ content: '올바른 방 번호가 아닙니다.' });
+            },
         }
     },
     messageReceiver: message => {
