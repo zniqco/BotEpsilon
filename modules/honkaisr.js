@@ -9,6 +9,9 @@ database.runSync('CREATE TABLE IF NOT EXISTS `honkaisr_user` (' +
     '`guild_id` varchar(24) NOT NULL,' +
     '`ltoken` varchar(64) NOT NULL,' +
     '`ltuid` varchar(12) NOT NULL,' +
+    '`cookie_token` varchar(64) NOT NULL,' +
+    '`cached_uid` varchar(12) NOT NULL,' +
+    '`cached_region` varchar(24) NOT NULL,' +
     'PRIMARY KEY (`user_id`))');
 
 schedule.scheduleJob({ hour: 2, minute: 5, tz: 'Asia/Seoul' }, async function () {
@@ -28,15 +31,10 @@ module.exports = {
             subcommand.setName('register')
                 .setDescription('유저를 등록합니다.')
                 .addStringOption(option =>
-                    option.setName('ltoken')
-                        .setDescription('ltoken')
+                    option.setName('cookie')
+                        .setDescription('브라우저 쿠키')
                         .setRequired(true)
-                        .setMaxLength(64))
-                .addStringOption(option =>
-                    option.setName('ltuid')
-                        .setDescription('ltuid')
-                        .setRequired(true)
-                        .setMaxLength(12)))
+                        .setMaxLength(1024)))
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.'))
@@ -51,15 +49,25 @@ module.exports = {
         'register': {
             ephemeral: true,
             execute: async function (interaction) {
-                const ltoken = interaction.options.getString('ltoken').replace(/[^a-zA-Z0-9]+/g, '');
-                const ltuid = interaction.options.getString('ltuid').replace(/[^0-9]+/g, '');
-                const result = await hoyolab.get(ltoken, ltuid, 'https://sg-public-api.hoyolab.com/event/luna/os/info?lang=ko-kr&act_id=e202303301540311');
+                const cookie = interaction.options.getString('cookie');
+                const cookies = utility.parseCookie(cookie);
 
-                if (!result)
-                    return await interaction.editReply({ content: '계정 정보가 올바르지 않습니다.' });
+                if (!cookies.ltoken || !cookies.ltuid || !cookies.cookie_token)
+                    return await interaction.editReply({ content: '쿠키가 올바르지 않습니다.' });
 
-                await database.run('REPLACE INTO `honkaisr_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`) VALUES (?, ?, ?, ?)', [
-                    interaction.user.id, interaction.guildId, ltoken, ltuid,
+                const region = 'prod_official_asia';
+                const recordRow = await hoyolab.getGameRecordRow(cookies.ltoken, cookies.ltuid, 6, region);
+
+                if (!recordRow)
+                    return await interaction.editReply({ content: '계정이 존재하지 않습니다.' });
+
+                const infoResult = await hoyolab.get(cookies.ltoken, cookies.ltuid, 'https://sg-public-api.hoyolab.com/event/luna/os/info?lang=ko-kr&act_id=e202303301540311');
+
+                if (!infoResult)
+                    return await interaction.editReply({ content: '출석 체크 정보가 존재하지 않습니다.' });
+
+                await database.run('REPLACE INTO `honkaisr_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`, `cookie_token`, `cached_uid`, `cached_region`) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+                    interaction.user.id, interaction.guildId, cookies.ltoken, cookies.ltuid, cookies.cookie_token, recordRow.game_role_id, recordRow.region,
                 ]);
 
                 await interaction.editReply({ content: '등록에 성공했습니다.' });
@@ -81,38 +89,43 @@ module.exports = {
         'info': {
             execute: async function (interaction) {
                 const user = interaction.options.getUser('user');
-                const userRow = await database.get('SELECT `ltoken`, `ltuid` FROM `honkaisr_user` WHERE `user_id` = ?', [
+                const userRow = await database.get('SELECT `ltoken`, `ltuid`, `cached_uid`, `cached_region` FROM `honkaisr_user` WHERE `user_id` = ?', [
                     user.id
                 ]);
 
                 if (!userRow)
                     return await interaction.editReply({ content: `봇에 등록되지 않은 유저입니다.` });
 
-                const recordRow = await hoyolab.getGameRecordRow(userRow.ltoken, userRow.ltuid, 6, 'prod_official_asia');
+                const uid = userRow.cached_uid;
+                const region = userRow.cached_region;
+                const parsed = await hoyolab.getParsedStarRailInfo(uid);
 
-                if (!recordRow)
-                    return await interaction.editReply({ content: '계정이 존재하지 않습니다.' });
+                if (!parsed)
+                    return await interaction.editReply({ content: 'sr_info_parsed 정보를 가져올 수 없습니다.' });
 
-                const uid = recordRow.game_role_id;
                 const index = await hoyolab.clientGet(userRow.ltoken, userRow.ltuid,
-                    `https://bbs-api-os.hoyolab.com/game_record/hkrpg/api/index?server=prod_official_asia&role_id=${uid}`);
+                    `https://bbs-api-os.hoyolab.com/game_record/hkrpg/api/index?server=${region}&role_id=${uid}`);
 
                 if (!index)
                     return await interaction.editReply({ content: 'index 정보를 가져올 수 없습니다.' });
 
                 const note = await hoyolab.clientGet(userRow.ltoken, userRow.ltuid,
-                    `https://bbs-api-os.hoyolab.com/game_record/hkrpg/api/note?server=prod_official_asia&role_id=${uid}`);
+                    `https://bbs-api-os.hoyolab.com/game_record/hkrpg/api/note?server=${region}&role_id=${uid}`);
 
                 if (!note)
                     return await interaction.editReply({ content: 'note 정보를 가져올 수 없습니다.' });
 
                 await interaction.editReply({ embeds: [
                     new EmbedBuilder()
-                        .setAuthor({ name: `Lv. ${recordRow.level} ${recordRow.nickname} (${uid})` })
+                        .setAuthor({
+                            name: `Lv. ${parsed.player.level} ${parsed.player.nickname} (${uid})`,
+                            iconURL: `https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/${parsed.player.avatar.icon}`
+                        })
                         .setTimestamp()
+                        .setThumbnail(`https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/${parsed.characters[0].icon}`)
                         .addFields(
-                            { name: '활동 일수', value: index.stats.active_days.toString(), inline: true },
-                            { name: '개방된 캐릭터', value: index.stats.avatar_num.toString(), inline: true },
+                            { name: '활동 일수', value: `${index.stats.active_days}일`, inline: true },
+                            { name: '캐릭터', value: `${index.stats.avatar_num}명`, inline: true },
                             { name: '업적 달성 개수', value: index.stats.achievement_num.toString(), inline: true },
                             { name: '오픈 전리품', value: index.stats.chest_num.toString(), inline: true },
                             { name: '망각의 정원', value: index.stats.abyss_process.replace(/<\/?[^>]+>/gi, ''), inline: true },

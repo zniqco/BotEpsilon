@@ -9,6 +9,9 @@ database.runSync('CREATE TABLE IF NOT EXISTS `genshin_user` (' +
     '`guild_id` varchar(24) NOT NULL,' +
     '`ltoken` varchar(64) NOT NULL,' +
     '`ltuid` varchar(12) NOT NULL,' +
+    '`cookie_token` varchar(64) NOT NULL,' +
+    '`cached_uid` varchar(12) NOT NULL,' +
+    '`cached_region` varchar(24) NOT NULL,' +
     'PRIMARY KEY (`user_id`))');
 
 schedule.scheduleJob({ hour: 2, minute: 25, tz: 'Asia/Seoul' }, async function () {
@@ -28,15 +31,10 @@ module.exports = {
             subcommand.setName('register')
                 .setDescription('유저를 등록합니다.')
                 .addStringOption(option =>
-                    option.setName('ltoken')
+                    option.setName('cookie')
                         .setDescription('ltoken')
                         .setRequired(true)
-                        .setMaxLength(64))
-                .addStringOption(option =>
-                    option.setName('ltuid')
-                        .setDescription('ltuid')
-                        .setRequired(true)
-                        .setMaxLength(12)))
+                        .setMaxLength(1024)))
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.')),
@@ -44,18 +42,28 @@ module.exports = {
         'register': {
             ephemeral: true,
             execute: async function (interaction) {
-                const ltoken = interaction.options.getString('ltoken').replace(/[^a-zA-Z0-9]+/g, '');
-                const ltuid = interaction.options.getString('ltuid').replace(/[^0-9]+/g, '');
-                const result = await hoyolab.get(ltoken, ltuid, 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481');
+                const cookie = interaction.options.getString('cookie');
+                const cookies = utility.parseCookie(cookie);
 
-                if (!result)
-                    return await interaction.editReply({ content: '계정 정보가 올바르지 않습니다.' });
+                if (!cookies.ltoken || !cookies.ltuid || !cookies.cookie_token)
+                    return await interaction.editReply({ content: '쿠키가 올바르지 않습니다.' });
 
-                await database.run('REPLACE INTO `genshin_user` (`user_id`, `guild_id`, `uid`, `ltoken`, `ltuid`) VALUES (?, ?, ?, ?, ?)', [
-                    interaction.user.id, interaction.guildId, uid, ltoken, ltuid,
+                const region = 'os_asia';
+                const recordRow = await hoyolab.getGameRecordRow(cookies.ltoken, cookies.ltuid, 2, region);
+
+                if (!recordRow)
+                    return await interaction.editReply({ content: '계정이 존재하지 않습니다.' });
+
+                const infoResult = await hoyolab.get(cookies.ltoken, cookies.ltuid, 'https://sg-hk4e-api.hoyolab.com/event/sol/info?lang=ko-kr&act_id=e202102251931481');
+
+                if (!infoResult)
+                    return await interaction.editReply({ content: '출석 체크 정보가 존재하지 않습니다.' });
+
+                await database.run('REPLACE INTO `genshin_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`, `cookie_token`) VALUES (?, ?, ?, ?, ?)', [
+                    interaction.user.id, interaction.guildId, cookies.ltoken, cookies.ltuid, cookies.cookie_token
                 ]);
 
-                return await interaction.editReply({ content: '등록에 성공했습니다.'});
+                await interaction.editReply({ content: '등록에 성공했습니다.' });
             },
         },
         'unregister': {

@@ -10,4 +10,14 @@ module.exports = {
     
         return text;
     },
+    parseCookie: function parseCookie (string) {
+        return string.split(';')
+            .map(v => v.split('='))
+            .reduce((a, v) => {
+                if (v && v.length >= 2)
+                    a[decodeURIComponent(v[0].trim())] = decodeURIComponent(v[1].trim());
+
+                return a;
+            }, {});
+    }
 };

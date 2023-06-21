@@ -12,11 +12,9 @@ const moduleFiles = fs.readdirSync('./modules').filter(file => file.endsWith('.j
 for (const file of moduleFiles) {
     const module = require('./modules/' + file);
 
-    if ('commandData' in module) { // Has command?
+    if ('commandData' in module && 'commandHandler' in module) { // Has command?
         commandDatas.push(module.commandData.toJSON());
-
-        if ('commandHandler' in module)
-            commandHandlers[module.commandData.name] = module.commandHandler;
+        commandHandlers[module.commandData.name] = module.commandHandler;
     }
 
     if ('messageReceiver' in module) {
@@ -30,40 +28,33 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 client.once(Events.ClientReady, async c => {
     console.log(`Logged in as '${c.user.tag}'`);
 
-    try {
-        await rest.put(
-            Routes.applicationCommands(config.clientId),
-            { body: commandDatas },
-        );
-    } catch (e) {
-        console.error(e);
-    }
+    await rest.put(Routes.applicationCommands(config.clientId),
+        { body: commandDatas },
+    );
 });    
 
 // Events
 client.on(Events.InteractionCreate, async interaction => {
-    if (interaction.isChatInputCommand()) {
-        const handler = commandHandlers[interaction.commandName];
+    if (!interaction.isChatInputCommand())
+        return;
 
-        if (handler) {
-            const subcommand = interaction.options.getSubcommand();
-            const entry = handler[subcommand];
+    const handler = commandHandlers[interaction.commandName];
 
-            if (entry) {
-                await interaction.deferReply({ ephemeral: entry.ephemeral ?? false });
+    if (handler) {
+        const subcommand = interaction.options.getSubcommand();
+        const entry = handler[subcommand];
 
-                try {
-                    await entry.execute(interaction);
-                } catch (e) {
-                    console.error(e);
-    
-                    await interaction.editReply({ content: '명령어를 실행하는데 실패했습니다. (EX)' });
-                }
-            } else {
-                await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', ephemeral: true });
-            }
+        if (!entry)
+            return await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', ephemeral: true });
 
-            return;
+        await interaction.deferReply({ ephemeral: entry.ephemeral ?? false });
+
+        try {
+            await entry.execute(interaction);
+        } catch (e) {
+            console.error(e);
+
+            await interaction.editReply({ content: '명령어를 실행하는데 실패했습니다. (EX)' });
         }
     }
 });

@@ -30,7 +30,7 @@ module.exports = {
             headers: this.makeHeader(ltoken, ltuid),
         });
 
-        return result?.retcode !== 0 ? result?.data?.data : null;
+        return result?.data.retcode === 0 ? result?.data?.data : null;
     },
     post: async function (ltoken, ltuid, url) {
         const result = await axios({
@@ -39,7 +39,7 @@ module.exports = {
             headers: this.makeHeader(ltoken, ltuid),
         });
 
-        return result?.retcode !== 0 ? result?.data?.data : null;
+        return result?.data.retcode === 0 ? result?.data?.data : null;
     },
     clientGet: async function (ltoken, ltuid, url) {
         const result = await axios({
@@ -48,12 +48,20 @@ module.exports = {
             headers: this.makeClientHeader(ltoken, ltuid),
         });
 
-        return result?.retcode !== 0 ? result?.data?.data : null;
+        return result?.data.retcode === 0 ? result?.data?.data : null;
     },
     getGameRecordRow: async function (ltoken, ltuid, game_id, region) {
         const result = await this.get(ltoken, ltuid, `https://bbs-api-os.hoyolab.com/game_record/card/wapi/getGameRecordCard?uid=${ltuid}`);
         const rows = result?.list?.filter(x => x.game_id == game_id && x.region == region);
 
         return rows ? rows[0] : null;
+    },
+    getParsedStarRailInfo: async function (uid) {
+        const result = await axios({
+            method: 'GET',
+            url: `https://api.mihomo.me/sr_info_parsed/${uid}?lang=kr`,
+        });;
+
+        return result?.data;
     }
 };
