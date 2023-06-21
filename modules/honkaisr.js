@@ -115,6 +115,8 @@ module.exports = {
                 if (!note)
                     return await interaction.editReply({ content: 'note 정보를 가져올 수 없습니다.' });
 
+                const mainCharacter = parsed.characters[0];
+
                 await interaction.editReply({ embeds: [
                     new EmbedBuilder()
                         .setAuthor({
@@ -122,12 +124,17 @@ module.exports = {
                             iconURL: `https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/${parsed.player.avatar.icon}`
                         })
                         .setTimestamp()
-                        .setThumbnail(`https://raw.githubusercontent.com/Mar-7th/StarRailRes/master/${parsed.characters[0].icon}`)
+                        .addFields(
+                            {
+                                name: `지원 캐릭터`,
+                                value: `[☆${mainCharacter.rank} Lv. ${mainCharacter.level} ${mainCharacter.name}](https://api.mihomo.me/sr_panel/${uid}?chara_index=0&lang=kr)`,
+                            },
+                        )
                         .addFields(
                             { name: '활동 일수', value: `${index.stats.active_days}일`, inline: true },
                             { name: '캐릭터', value: `${index.stats.avatar_num}명`, inline: true },
-                            { name: '업적 달성 개수', value: index.stats.achievement_num.toString(), inline: true },
-                            { name: '오픈 전리품', value: index.stats.chest_num.toString(), inline: true },
+                            { name: '업적 달성', value: `${index.stats.achievement_num}개`, inline: true },
+                            { name: '전리품', value: `${index.stats.chest_num}개`, inline: true },
                             { name: '망각의 정원', value: index.stats.abyss_process.replace(/<\/?[^>]+>/gi, ''), inline: true },
                             { name: '개척력', value: `${note.current_stamina}/${note.max_stamina}`, inline: true },
                         )
