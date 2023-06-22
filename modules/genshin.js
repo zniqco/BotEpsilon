@@ -34,7 +34,7 @@ module.exports = {
                     option.setName('cookie')
                         .setDescription('ltoken')
                         .setRequired(true)
-                        .setMaxLength(1024)))
+                        .setMaxLength(2048)))
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.')),
@@ -59,8 +59,8 @@ module.exports = {
                 if (!infoResult)
                     return await interaction.editReply({ content: '출석 체크 정보가 존재하지 않습니다.' });
 
-                await database.run('REPLACE INTO `genshin_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`, `cookie_token`) VALUES (?, ?, ?, ?, ?)', [
-                    interaction.user.id, interaction.guildId, cookies.ltoken, cookies.ltuid, cookies.cookie_token
+                await database.run('REPLACE INTO `genshin_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`, `cookie_token`, `cached_uid`, `cached_region`) VALUES (?, ?, ?, ?, ?, ?, ?)', [
+                    interaction.user.id, interaction.guildId, cookies.ltoken, cookies.ltuid, cookies.cookie_token, recordRow.game_role_id, recordRow.region,
                 ]);
 
                 await interaction.editReply({ content: '등록에 성공했습니다.' });

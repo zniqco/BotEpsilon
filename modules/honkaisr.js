@@ -34,7 +34,7 @@ module.exports = {
                     option.setName('cookie')
                         .setDescription('브라우저 쿠키')
                         .setRequired(true)
-                        .setMaxLength(1024)))
+                        .setMaxLength(2048)))
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.'))
