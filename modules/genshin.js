@@ -1,4 +1,5 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const axios = require('axios').default;
 const schedule = require('node-schedule');
 const utility = require('../utility.js');
 const database = require('../database.js');
@@ -37,7 +38,15 @@ module.exports = {
                         .setMaxLength(2048)))
         .addSubcommand(subcommand =>
             subcommand.setName('unregister')
-                .setDescription('유저 등록을 해제 합니다.')),
+                .setDescription('유저 등록을 해제 합니다.'))
+        .addSubcommand(subcommand =>
+            subcommand.setName('redeem')
+                .setDescription('리딤 코드를 등록합니다.')
+                .addStringOption(option =>
+                    option.setName('code')
+                        .setDescription('리딤 코드 (콤마로 구분 가능, 최대 3개)')
+                        .setRequired(true)
+                        .setMaxLength(128))),
     commandHandler: {
         'register': {
             ephemeral: true,
@@ -77,6 +86,34 @@ module.exports = {
                     await interaction.editReply({ content: `등록이 해제되었습니다.` });
                 else
                     await interaction.editReply({ content: `등록되지 않은 계정입니다.` });
+            },
+        },
+        'redeem': {
+            execute: async function (interaction) {
+                const code = interaction.options.getString('code');
+                const userRow = await database.get('SELECT `ltoken`, `ltuid`, `cookie_token`, `cached_uid`, `cached_region` FROM `genshin_user` WHERE `user_id` = ?', [
+                    interaction.user.id
+                ]);
+
+                if (!userRow)
+                    return await interaction.editReply({ content: `봇에 등록되지 않은 유저입니다.` });
+
+                const codes = code.split(',', 3).map(x => x.trim()).filter((x, ii, a) => a.indexOf(x) == ii && x != '');
+                const results = Array(codes.length).fill('...');
+
+                await interaction.editReply(hoyolab.makeRedeemEmbeds(codes, results));
+
+                for (var i = 0; i < codes.length; i++) {
+                    let parsed = await hoyolab.webGet(userRow, 'https://sg-hk4e-api.hoyoverse.com/common/apicdkey/api/webExchangeCdkey' + 
+                        `?uid=${userRow.cached_uid}&region=${userRow.cached_region}&cdkey=${codes[i]}&lang=ko&game_biz=hk4e_global`);
+
+                    results[i] = parsed ? parsed.message : '요청에 실패했습니다.';
+    
+                    await interaction.editReply(hoyolab.makeRedeemEmbeds(codes, results));
+
+                    if (i != codes.length - 1)
+                        await utility.delay(5000);
+                }
             },
         },
     },
