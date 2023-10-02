@@ -10,7 +10,6 @@ database.runSync('CREATE TABLE IF NOT EXISTS `honkaisr_user` (' +
     '`guild_id` varchar(24) NOT NULL,' +
     '`ltoken` varchar(64) NOT NULL,' +
     '`ltuid` varchar(12) NOT NULL,' +
-    '`cookie_token` varchar(64) NOT NULL,' +
     '`cached_uid` varchar(12) NOT NULL,' +
     '`cached_region` varchar(24) NOT NULL,' +
     'PRIMARY KEY (`user_id`))');
@@ -40,14 +39,6 @@ module.exports = {
             subcommand.setName('unregister')
                 .setDescription('유저 등록을 해제 합니다.'))
         .addSubcommand(subcommand =>
-            subcommand.setName('redeem')
-                .setDescription('리딤 코드를 등록합니다.')
-                .addStringOption(option =>
-                    option.setName('code')
-                        .setDescription('리딤 코드 (콤마로 구분 가능, 최대 3개)')
-                        .setRequired(true)
-                        .setMaxLength(128)))
-        .addSubcommand(subcommand =>
             subcommand.setName('info')
                 .setDescription('정보를 확인합니다.')
                 .addUserOption(option =>
@@ -61,7 +52,7 @@ module.exports = {
                 const cookie = interaction.options.getString('cookie');
                 const cookies = utility.parseCookie(cookie);
 
-                if (!cookies.ltoken || !cookies.ltuid || !cookies.cookie_token)
+                if (!cookies.ltoken || !cookies.ltuid)
                     return await interaction.editReply({ content: '쿠키가 올바르지 않습니다.' });
 
                 const region = 'prod_official_asia';
@@ -75,8 +66,8 @@ module.exports = {
                 if (!infoResult)
                     return await interaction.editReply({ content: '출석 체크 정보가 존재하지 않습니다.' });
 
-                await database.run('REPLACE INTO `honkaisr_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`, `cookie_token`, `cached_uid`, `cached_region`) VALUES (?, ?, ?, ?, ?, ?, ?)', [
-                    interaction.user.id, interaction.guildId, cookies.ltoken, cookies.ltuid, cookies.cookie_token, recordRow.game_role_id, recordRow.region,
+                await database.run('REPLACE INTO `honkaisr_user` (`user_id`, `guild_id`, `ltoken`, `ltuid`, `cached_uid`, `cached_region`) VALUES (?, ?, ?, ?, ?, ?)', [
+                    interaction.user.id, interaction.guildId, cookies.ltoken, cookies.ltuid, recordRow.game_role_id, recordRow.region,
                 ]);
 
                 await interaction.editReply({ content: '등록에 성공했습니다.' });
@@ -93,34 +84,6 @@ module.exports = {
                     await interaction.editReply({ content: `등록이 해제되었습니다.` });
                 else
                     await interaction.editReply({ content: `등록되지 않은 계정입니다.` });
-            },
-        },
-        'redeem': {
-            execute: async function (interaction) {
-                const code = interaction.options.getString('code');
-                const userRow = await database.get('SELECT `ltoken`, `ltuid`, `cookie_token`, `cached_uid`, `cached_region` FROM `honkaisr_user` WHERE `user_id` = ?', [
-                    interaction.user.id
-                ]);
-
-                if (!userRow)
-                    return await interaction.editReply({ content: `봇에 등록되지 않은 유저입니다.` });
-
-                const codes = code.split(',', 3).map(x => x.trim()).filter((x, ii, a) => a.indexOf(x) == ii && x != '');
-                const results = Array(codes.length).fill('...');
-
-                await interaction.editReply(hoyolab.makeRedeemEmbeds(codes, results));
-
-                for (var i = 0; i < codes.length; i++) {
-                    let parsed = await hoyolab.webGet(userRow, 'https://sg-hkrpg-api.hoyoverse.com/common/apicdkey/api/webExchangeCdkey' + 
-                        `?t=${Date.now()}&uid=${userRow.cached_uid}&region=${userRow.cached_region}&cdkey=${codes[i]}&lang=ko&game_biz=hkrpg_global`);
-
-                    results[i] = parsed ? parsed.message : '요청에 실패했습니다.';
-    
-                    await interaction.editReply(hoyolab.makeRedeemEmbeds(codes, results));
-
-                    if (i != codes.length - 1)
-                        await utility.delay(5000);
-                }
             },
         },
         'info': {
