@@ -1,9 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
 
-function generateMessage(n) {
-    return `:flag_kr:  <https://mahjongsoul.game.yo-star.com/?room=${n}>\n:flag_jp:  <https://game.mahjongsoul.com/?room=${n}>`
-}
-
 module.exports = {
     commandData: new SlashCommandBuilder()
         .setName('mahjongsoul')
@@ -45,3 +41,7 @@ module.exports = {
         }
     }
 };
+
+function generateMessage(n) {
+    return `:flag_kr:  <https://mahjongsoul.game.yo-star.com/?room=${n}>\n:flag_jp:  <https://game.mahjongsoul.com/?room=${n}>`
+}

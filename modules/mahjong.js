@@ -1,11 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const database = require('../database.js');
-const uma = [15, 5, -5, -15];
+const baseUma = [15, 5, -5, -15];
+const baseRating = 1000;
+const ratingMultiplier = 10;
 
 database.runSync('CREATE TABLE IF NOT EXISTS `mahjong_rank` (' + 
     '`guild_id` varchar(24) NOT NULL,' +
     '`user_id` varchar(24) NOT NULL,' +
-    '`score` INTEGER NOT NULL,' +
+    '`rating` INTEGER NOT NULL,' +
     'PRIMARY KEY (`guild_id`, `user_id`))');
 
 database.runSync('CREATE TABLE IF NOT EXISTS `mahjong_session` (' + 
@@ -74,7 +76,7 @@ module.exports = {
     commandHandler: {
         'rank-list': {
             execute: async function (interaction) {
-                const result = await database.all('SELECT `user_id`, `score` FROM `mahjong_rank` WHERE `guild_id` = ? ORDER BY `score` DESC LIMIT 20', [
+                const result = await database.all('SELECT `user_id`, `rating` FROM `mahjong_rank` WHERE `guild_id` = ? ORDER BY `rating` DESC LIMIT 20', [
                     interaction.guildId,
                 ]);
 
@@ -95,7 +97,7 @@ module.exports = {
                         new EmbedBuilder()
                             .addFields({
                                 name: `${interaction.guild.name} 랭킹`,
-                                value: result.map((x, i) => `${i + 1}위 / ${x.score / 10} / <@${x.user_id}>`).join('\n')
+                                value: result.map((x, i) => `${i + 1}위 / ${x.rating / ratingMultiplier} / <@${x.user_id}>`).join('\n')
                             })
                     ]
                 });
@@ -103,29 +105,9 @@ module.exports = {
         },
         'rank-write': {
             execute: async function (interaction) {
-                const baseTable = [...Array(4).keys()]
-                    .map(x => {
-                        return {
-                            id: interaction.options.getUser(`user-${x + 1}`).id,
-                            point: interaction.options.getInteger(`point-${x + 1}`),
-                            index: x
-                        }
-                    })
-                const table = baseTable
-                    .slice()
-                    .sort((a, b) => {
-                        if (a.point != b.point)
-                            return b.point - a.point;
+                const players = getPlayersFromInteraction(interaction);
 
-                        return a.index - b.index;
-                    })
-                    .map((x, i) => {
-                        x.score = (x.point - 25000) / 100 + uma[i] * 10;
-
-                        return x;
-                    });
-
-                if (table.some(x => x.point % 100 !== 0)) {
+                if (players.some(x => x.point % 100 !== 0)) {
                     return await interaction.editReply({
                         embeds: [
                             new EmbedBuilder()
@@ -135,7 +117,7 @@ module.exports = {
                                 })
                         ]
                     });
-                } else if (table.reduce((a, b) => a + b.point, 0) !== 100000) {
+                } else if (players.reduce((a, b) => a + b.point, 0) !== 100000) {
                     return await interaction.editReply({
                         embeds: [
                             new EmbedBuilder()
@@ -145,7 +127,7 @@ module.exports = {
                                 })
                         ]
                     });
-                } else if ((new Set(table.map(x => x.id))).size !== table.length) {
+                } else if ((new Set(players.map(x => x.id))).size !== players.length) {
                     return await interaction.editReply({
                         embeds: [
                             new EmbedBuilder()
@@ -157,21 +139,17 @@ module.exports = {
                     });
                 } else {
                     await database.run('INSERT INTO `mahjong_session` (`guild_id`, `time`, `user_east`, `point_east`, `user_south`, `point_south`, `user_west`, `point_west`, `user_north`, `point_north`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [
-                        interaction.guildId, Date.now(), baseTable[0].id, baseTable[0].point, baseTable[1].id, baseTable[1].point, baseTable[2].id, baseTable[2].point, baseTable[3].id, baseTable[3].point
+                        guildId, Date.now(), players[0].id, players[0].point, players[1].id, players[1].point, players[2].id, players[2].point, players[3].id, players[3].point
                     ]);
 
-                    for (const p of table) {
-                        await database.run('INSERT INTO `mahjong_rank` (`guild_id`, `user_id`, `score`) VALUES (?, ?, ?) ON CONFLICT(`guild_id`, `user_id`) DO UPDATE SET `score` = `score` + ?', [
-                            interaction.guildId, p.id, p.score, p.score,
-                        ]);
-                    }
+                    const table = await submitRank(interaction.guildId, players);
 
                     return await interaction.editReply({
                         embeds: [
                             new EmbedBuilder()
                                 .addFields({
                                     name: '등록 성공',
-                                    value: table.map((x, i) => `${i + 1}위 / ${x.score / 10} (${x.point}) / <@${x.id}>`).join('\n')
+                                    value: table.map((x, i) => `${i + 1}위 / ${x.uma / 10} (${x.point}) / <@${x.id}>`).join('\n')
                                 })
                         ]
                     });
@@ -180,3 +158,109 @@ module.exports = {
         }
     },
 };
+
+function getPlayersFromInteraction(interaction) {
+    return [...Array(4).keys()]
+        .map(x => {
+            return {
+                id: interaction.options.getUser(`user-${x + 1}`).id,
+                point: interaction.options.getInteger(`point-${x + 1}`),
+                index: x
+            }
+        });
+}
+
+function getSortedPlayers(players) {
+    return players
+        .slice()
+        .sort((a, b) => {
+            if (a.point != b.point)
+                return b.point - a.point;
+
+            return a.index - b.index;
+        })
+        .map((x, i) => {
+            x.uma = (x.point - 25000) / 100 + baseUma[i] * 10;
+
+            return x;
+        });
+}
+
+async function submitRank(guildId, players) {
+    const table = getSortedPlayers(players);
+
+    for (const p of table) {
+        const row = await database.get('SELECT `rating` FROM `mahjong_rank` WHERE `guild_id` = ? AND `user_id` = ?', [guildId, p.id]);
+        const rating = row ? row.rating : (baseRating * ratingMultiplier);
+
+        p.rating = rating;
+    }
+
+    const count = table.length;
+    const k = (40 * ratingMultiplier) / (count - 1);
+
+    for (let i = 0; i < count; i++) {
+        const s0 = table[i].rating;
+
+        table[i].updateRating = 0;
+
+        for (let j = 0; j < count; j++) {
+            if (i !== j) {
+                const s1 = table[j].rating;
+                const delta = (i < j) ? 1 : 0;
+                const c = 1 / (1 + Math.pow(10, (s1 - s0) / (400 * ratingMultiplier)));
+
+                table[i].updateRating += Math.round(k * (delta - c));
+            }
+        }
+    }
+
+    for (const p of table) {
+        await database.run('INSERT INTO `mahjong_rank` (`guild_id`, `user_id`, `rating`) VALUES (?, ?, ?) ON CONFLICT(`guild_id`, `user_id`) DO UPDATE SET `rating` = `rating` + ?', [
+            guildId, p.id, baseRating * ratingMultiplier + p.updateRating, p.updateRating,
+        ]);
+    }
+
+    return table;
+}
+
+/*
+async function migrateRanking() {
+    const games = await database.all('SELECT * FROM `mahjong_session` ORDER BY `game_id` ASC');
+
+    await database.run('DELETE FROM `mahjong_rank`');
+
+    for (const game of games) {
+        const players = [
+            {
+                id: game.user_east,
+                point: game.point_east,
+                index: 0,
+            },
+            {
+                id: game.user_south,
+                point: game.point_south,
+                index: 1,
+            },
+            {
+                id: game.user_west,
+                point: game.point_west,
+                index: 2,
+            },
+            {
+                id: game.user_north,
+                point: game.point_north,
+                index: 3,
+            },
+        ];
+
+        const table = await submitRank(game.guild_id, players);
+
+        console.log(table.map((x, i) => `${i + 1}위 / ${x.uma / 10} (${x.point}) / ${x.updateRating} / <@${x.id}>`).join('\n'));
+    }
+}
+
+(async () => {
+    await migrateRanking();
+})();
+*/
