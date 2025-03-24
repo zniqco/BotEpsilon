@@ -126,5 +126,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# Bot config
+# Bot specific files
 config.json
+database.db
