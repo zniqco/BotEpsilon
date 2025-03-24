@@ -1,8 +1,8 @@
 const config = require('./config.js');
 const fs = require('node:fs');
-const { Client, REST, Events, GatewayIntentBits, Collection, Routes } = require('discord.js');
+const { Client, REST, Events, GatewayIntentBits, SlashCommandBuilder, Routes } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-const commandHandlers = {};
+const commands = {};
 const messageReceivers = [];
 
 // Modules
@@ -12,9 +12,30 @@ const moduleFiles = fs.readdirSync('./modules').filter(file => file.endsWith('.j
 for (const file of moduleFiles) {
     const module = require('./modules/' + file);
 
-    if ('commandData' in module && 'commandHandler' in module) { // Has command?
-        commandDatas.push(module.commandData.toJSON());
-        commandHandlers[module.commandData.name] = module.commandHandler;
+    if ('commands' in module) { // Has command?
+        const builder = new SlashCommandBuilder();
+
+        builder.setName(module.name);
+        builder.setDescription(module.description);
+
+        if (builder.defaultMemberPermissions)
+            builder.setDefaultMemberPermissions(builder.defaultMemberPermissions);
+
+        for (const command of module.commands) {
+            builder.addSubcommand(subcommand => {
+                subcommand.setName(command.name);
+                subcommand.setDescription(command.description);
+
+                if (command.optionGenerator)
+                    command.optionGenerator(subcommand); // TODO: Migrate to custom options
+
+                return subcommand;
+            });
+
+            commands[`${module.name}/${command.name}`] = command;
+        }
+
+        commandDatas.push(builder.toJSON());
     }
 
     if ('messageReceiver' in module) {
@@ -38,24 +59,21 @@ client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isChatInputCommand())
         return;
 
-    const handler = commandHandlers[interaction.commandName];
+    const command = interaction.commandName;
+    const subcommand = interaction.options.getSubcommand();
+    const entry = commands[`${command}/${subcommand}`];
 
-    if (handler) {
-        const subcommand = interaction.options.getSubcommand();
-        const entry = handler[subcommand];
+    if (!entry)
+        return await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', ephemeral: true });
 
-        if (!entry)
-            return await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', ephemeral: true });
+    await interaction.deferReply({ ephemeral: entry.ephemeral ?? false });
 
-        await interaction.deferReply({ ephemeral: entry.ephemeral ?? false });
+    try {
+        await entry.callback(interaction);
+    } catch (e) {
+        console.error(e);
 
-        try {
-            await entry.execute(interaction);
-        } catch (e) {
-            console.error(e);
-
-            await interaction.editReply({ content: '명령어를 실행하는데 실패했습니다. (EX)' });
-        }
+        await interaction.editReply({ content: '명령어를 실행하는데 실패했습니다. (EX)' });
     }
 });
 
