@@ -68,18 +68,5 @@ module.exports = {
                     await interaction.editReply(`메모가 존재하지 않습니다.`);
             },
         },
-    },
-    messageReceiver: function (message) {
-        if (message.content.length <= 32) {
-            (async () => {
-                const result = await database.get('SELECT `contents` FROM `memo` WHERE `guild_id` = ? AND `text` = ?', [
-                    message.guildId, message.content,
-                ]);
-
-                if (result && result.contents) {
-                    await message.reply({ content: result.contents });
-                }
-            })();
-        }
     }
 };
