@@ -1,6 +1,6 @@
 const config = require('./config.js');
 const fs = require('node:fs');
-const { Client, REST, Events, GatewayIntentBits, SlashCommandBuilder, Routes } = require('discord.js');
+const { Client, Events, GatewayIntentBits, MessageFlags, REST, SlashCommandBuilder, Routes } = require('discord.js');
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
 const commands = {};
 const messageReceivers = [];
@@ -64,9 +64,12 @@ client.on(Events.InteractionCreate, async interaction => {
     const entry = commands[`${command}/${subcommand}`];
 
     if (!entry)
-        return await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', ephemeral: true });
+        return await interaction.reply({ content: '명령어를 실행하는데 실패했습니다. (NF)', flags: MessageFlags.Ephemeral });
 
-    await interaction.deferReply({ ephemeral: entry.ephemeral ?? false });
+    if (entry.ephemeral)
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    else
+        await interaction.deferReply();
 
     try {
         await entry.callback(interaction);
